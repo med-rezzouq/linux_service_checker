@@ -1,0 +1,102 @@
+sudo mkdir monitorservices
+sudo chmod u+rw,g+rw,o+rw monitorservices
+sudo chmod u+rw,g+rw,o+rw myservicestatus.sh
+chmod +x myservicestatus.sh
+
+touch myservicestatus.log
+sudo chmod u+rw,g+rw,o+rw myservicestatus.log
+
+
+
+echo '#!/bin/bash
+
+unit_name="export.service"
+log_file="myservicestatus.log"
+
+# Get the current date and time
+current_datetime=$(date +"%Y-%m-%d %H:%M:%S")
+
+# Get the SUB status using systemctl show
+sub_status=$(systemctl show "$unit_name" --property=SubState)
+
+# Check if the SUB status is "exited" or "failed"
+if [ "$sub_status" == "exited" ] || [ "$sub_status" == "failed" ]; then
+    # Stop the service
+    systemctl stop "$unit_name" >> "$log_file"
+
+    # Disable the service
+    systemctl disable "$unit_name" >> "$log_file"
+
+    # Enable the service
+    systemctl enable "$unit_name" >> "$log_file"
+
+    # Start the service
+    systemctl start "$unit_name" >> "$log_file"
+    echo "[$current_datetime] Started the service $unit_name." >> "$log_file"
+else
+    echo "[$current_datetime] The service $unit_name is not in the 'exited' or 'failed' state. No action needed." >> "$log_file"
+fi' > myservicestatus.sh
+
+---------------------------------------------------------------
+
+###########################
+then to run we use ./myservicestatus.sh
+
+
+----------------creating the timer and services files and giving access--------------
+sudo touch myservicestatus.service
+sudo chmod u+rw,g+rw,o+rw myservicestatus.service
+
+sudo touch myservicestatus.timer
+sudo chmod u+rw,g+rw,o+rw myservicestatus.timer
+
+-----------------------create service-----------
+
+[Unit]
+Description=Run my service status script
+Name=myservicestatus
+
+[Service]
+Type=oneshot
+ExecStart=/app/scripts/monitorservices/myservicestatus.sh
+
+[Install]
+WantedBy=default.target
+
+----------------------create timer ---------------
+
+[Unit]
+Description=Run my service status script regularly
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=15min
+
+[Install]
+WantedBy=timers.target
+
+-----------------------------------------------
+----------  then reload services --------------
+sudo systemctl daemon-reload
+
+sudo systemctl enable --now myservicestatus.timer
+
+-----------------------------------------------
+
+
+ sudo systemctl status myservicestatus
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
